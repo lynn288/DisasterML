@@ -8,7 +8,7 @@ from xgboost import XGBClassifier
 # ===================================
 # 1. Load the Trained XGBoost Model
 # ===================================
-with open("xgboost_model.pkl", "rb") as file:
+with open("xgb_model.pkl", "rb") as file:
     xgb_model = pickle.load(file)
 
 # Load dataset to extract necessary details

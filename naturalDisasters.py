@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
-
+import pickle
 
 # =============================================================================
 # 1. DATA LOADING & INITIAL PREPROCESSING
@@ -187,7 +187,19 @@ plt.ylabel('Actual')
 plt.title('CatBoost Confusion Matrix')
 plt.show()
 
+with open("ensemble_model.pkl", "wb") as file:
+    pickle.dump(ensemble_model, file)
 
+# Save individual models
+with open("rf_model.pkl", "wb") as file:
+    pickle.dump(rf_model, file)
 
+with open("xgb_model.pkl", "wb") as file:
+    pickle.dump(xgb_model, file)
 
+with open("catboost_model.pkl", "wb") as file:
+    pickle.dump(cat_model, file)
+
+with open("label_encoder.pkl", "wb") as file:
+    pickle.dump(label_encoder, file)
 
