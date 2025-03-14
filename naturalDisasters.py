@@ -9,13 +9,14 @@ import matplotlib.pyplot as plt
 #pip install xgboost
 import seaborn as sns
 from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
+import pickle
 
 # =============================================================================
 # 1. DATA LOADING & INITIAL PREPROCESSING
 # =============================================================================
 # Load the dataset
-df = pd.read_excel('C:/Users/jocel/ml/naturalDisasters.xlsx')  # Replace with your file path
-
+df = pd.read_excel('naturalDisasters.xlsx')
 # Select only the required columns
 columns_needed = [
     'Disaster Type', 'Country', 'Start Year', 'Start Month', 'Start Day',
@@ -92,19 +93,47 @@ X_test = scaler.transform(X_test)
 # --------------------------
 # 5a. Random Forest Classifier
 # --------------------------
-rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+# rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model = RandomForestClassifier(
+    n_estimators=100, random_state=42
+)
 rf_model.fit(X_train, y_train)
 
 # --------------------------
 # 5b. Gradient Boosting Classifier (XGBoost)
 # --------------------------
-xgb_model = XGBClassifier(n_estimators=100, random_state=42, use_label_encoder=False, eval_metric='mlogloss')
+xgb_model = XGBClassifier(
+    n_estimators=100,
+    random_state=42,
+    use_label_encoder=False,
+    eval_metric='mlogloss'
+)
 xgb_model.fit(X_train, y_train)
 
 # --------------------------
-# 5c. Ensemble Model: Voting Classifier (Soft Voting)
+# 5c. CatBoost Classifier
 # --------------------------
-ensemble_model = VotingClassifier(estimators=[('rf', rf_model), ('xgb', xgb_model)], voting='soft')
+cat_model = CatBoostClassifier(
+    iterations=100,
+    learning_rate=0.1,
+    depth=6,
+    loss_function='MultiClass',
+    random_seed=42,
+    verbose=False # Set to True if you want to see training progress
+)
+cat_model.fit(X_train, y_train)
+
+# --------------------------
+# 5e. Ensemble Model: Voting Classifier (Soft Voting)
+# --------------------------
+ensemble_model = VotingClassifier(
+    estimators=[
+        ('rf', rf_model),
+        ('xgb', xgb_model),
+        ('cat', cat_model)
+    ],
+    voting='soft'
+)
 ensemble_model.fit(X_train, y_train)
 
 # =============================================================================
@@ -146,4 +175,31 @@ plt.xlabel('Predicted')
 plt.ylabel('Actual')
 plt.title('XGBoost Confusion Matrix')
 plt.show()
+
+# Evaluate CatBoost alone
+cat_pred = cat_model.predict(X_test)
+print("CatBoost Accuracy:", accuracy_score(y_test, cat_pred))
+print("CatBoost Classification Report:\n", classification_report(y_test, cat_pred, zero_division=0))
+plt.figure(figsize=(10, 6))
+sns.heatmap(confusion_matrix(y_test, cat_pred), annot=True, fmt='d', cmap='Blues')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('CatBoost Confusion Matrix')
+plt.show()
+
+with open("ensemble_model.pkl", "wb") as file:
+    pickle.dump(ensemble_model, file)
+
+# Save individual models
+with open("rf_model.pkl", "wb") as file:
+    pickle.dump(rf_model, file)
+
+with open("xgb_model.pkl", "wb") as file:
+    pickle.dump(xgb_model, file)
+
+with open("catboost_model.pkl", "wb") as file:
+    pickle.dump(cat_model, file)
+
+with open("label_encoder.pkl", "wb") as file:
+    pickle.dump(label_encoder, file)
 

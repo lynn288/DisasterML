@@ -8,11 +8,11 @@ from xgboost import XGBClassifier
 # ===================================
 # 1. Load the Trained XGBoost Model
 # ===================================
-with open("xgboost_model.pkl", "rb") as file:
+with open("xgb_model.pkl", "rb") as file:
     xgb_model = pickle.load(file)
 
 # Load dataset to extract necessary details
-df = pd.read_excel('C:/Users/jocel/ml/naturalDisasters.xlsx')
+df = pd.read_excel('naturalDisasters.xlsx')
 
 # Extract unique country names (ensure uniformity)
 df["Country"] = df["Country"].str.strip()  # Remove spaces
