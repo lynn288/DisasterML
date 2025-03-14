@@ -7,7 +7,8 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 from xgboost import XGBClassifier
-
+from catboost import CatBoostClassifier
+from sklearn.ensemble import ExtraTreesClassifier
 # =============================================================================
 # 1. DATA LOADING & INITIAL PREPROCESSING
 # =============================================================================
@@ -128,3 +129,35 @@ for n_estimators in xgb_param_grid['n_estimators']:
                     pred_xgb = xgb_model.predict(X_test)
                     acc_xgb = accuracy_score(y_test, pred_xgb)
                     print(f"XGB: n_estimators={n_estimators}, max_depth={max_depth}, learning_rate={learning_rate}, subsample={subsample}, colsample_bytree={colsample_bytree} => Accuracy: {acc_xgb:.4f}")
+
+# --- CatBoost ---
+cat_param_grid = {
+    'iterations': [50, 100, 200],
+    'learning_rate': [0.01, 0.05, 0.1],
+    'depth': [4, 6, 8],
+    'l2_leaf_reg': [1, 3, 5, 7],
+    'border_count': [32, 64, 128]
+}
+
+print("\nCatBoost Hyperparameter Results (Accuracy):")
+for iterations in cat_param_grid['iterations']:
+    for learning_rate in cat_param_grid['learning_rate']:
+        for depth in cat_param_grid['depth']:
+            for l2_leaf_reg in cat_param_grid['l2_leaf_reg']:
+                for border_count in cat_param_grid['border_count']:
+                    cat_model = CatBoostClassifier(
+                        iterations=iterations,
+                        learning_rate=learning_rate,
+                        depth=depth,
+                        l2_leaf_reg=l2_leaf_reg,
+                        border_count=border_count,
+                        loss_function='MultiClass',
+                        random_seed=42,
+                        verbose=False
+                    )
+                    cat_model.fit(X_train, y_train)
+                    pred_cat = cat_model.predict(X_test)
+                    acc_cat = accuracy_score(y_test, pred_cat)
+                    print(f"CAT: iterations={iterations}, learning_rate={learning_rate}, depth={depth}, l2_leaf_reg={l2_leaf_reg}, border_count={border_count} => Accuracy: {acc_cat:.4f}")
+
+
