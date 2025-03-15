@@ -6,7 +6,7 @@ import time
 # ==========================================
 # 1. Define File Paths
 # ==========================================
-BASE_DIR = "C:\\Users\\bryan\\Desktop\\INF2008-main" #Change this to the respective directory
+BASE_DIR = "INF2008-main" #Change this to the respective directory
 
 DATA_PROCESSING_SCRIPT = os.path.join(BASE_DIR, "dataProcessing.py")
 MODEL_TRAINING_SCRIPT = os.path.join(BASE_DIR, "naturalDisastersV2.py")

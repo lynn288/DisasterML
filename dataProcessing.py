@@ -2,48 +2,37 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
-def correlation_feature_selection(df, target_col, corr_threshold=0.9):
+def drop_low_correlation_features(df, target_col, corr_threshold=0.1):
     """
-    Drop features that are highly correlated with each other.
-    
-    For each pair of features with correlation above corr_threshold,
-    the feature with lower absolute correlation with the target is dropped.
+    Drop features that have a low absolute correlation with the target variable.
     
     Parameters:
-        df (DataFrame): Input dataframe containing features and target.
-        target_col (str): Name of the target column.
-        corr_threshold (float): Correlation threshold for dropping features.
+        df (DataFrame): The input dataframe.
+        target_col (str): The name of the target column.
+        corr_threshold (float): The minimum absolute correlation to keep a feature.
         
     Returns:
         List of columns to drop.
     """
     # Select only numeric columns for correlation computation
     numeric_df = df.select_dtypes(include=[np.number])
+    # Ensure the target column is included
     if target_col not in numeric_df.columns:
         numeric_df[target_col] = df[target_col]
-    corr_matrix = numeric_df.corr().abs()
-    target_corr = corr_matrix[target_col]
     
-    # Get list of feature columns (exclude target)
-    features = [col for col in numeric_df.columns if col != target_col]
+    # Compute the absolute correlations with the target
+    target_corr = numeric_df.corr()[target_col].abs()
     
-    drop_cols = set()
-    # Compare each pair of features
-    for i in range(len(features)):
-        for j in range(i + 1, len(features)):
-            col1, col2 = features[i], features[j]
-            if corr_matrix.loc[col1, col2] > corr_threshold:
-                # Drop the feature with the lower correlation to the target
-                if target_corr[col1] >= target_corr[col2]:
-                    drop_cols.add(col2)
-                else:
-                    drop_cols.add(col1)
-    return list(drop_cols)
+    # Identify features with correlation below the threshold (exclude target)
+    drop_cols = target_corr[target_corr < corr_threshold].index.tolist()
+    if target_col in drop_cols:
+        drop_cols.remove(target_col)
+    return drop_cols
 
-def load_and_preprocess_data(input_file, output_file, corr_threshold=0.9):
-    # -----------------------------
+def load_and_preprocess_data(input_file, output_file, corr_threshold=0.1):
+    # =============================================================================
     # 1. DATA LOADING & INITIAL PREPROCESSING
-    # -----------------------------
+    # =============================================================================
     df = pd.read_excel(input_file)
     columns_needed = [
         'Disaster Type', 'Country', 'Start Year', 'Start Month', 'Start Day',
@@ -52,6 +41,7 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.9):
     ]
     df = df[columns_needed]
     
+    # Fill missing values for numeric columns and assign placeholder for missing date parts
     df = df.fillna({
         'Total Deaths': 0,
         'No. Injured': 0,
@@ -62,9 +52,9 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.9):
         'End Day': -1
     })
     
-    # -----------------------------
+    # =============================================================================
     # 2. DATE CONVERSION & FEATURE ENGINEERING
-    # -----------------------------
+    # =============================================================================
     # Convert Start Date
     start_date_df = df[['Start Year', 'Start Month', 'Start Day']].replace(-1, np.nan)\
                     .rename(columns={'Start Year': 'year', 'Start Month': 'month', 'Start Day': 'day'})
@@ -75,17 +65,17 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.9):
                   .rename(columns={'End Year': 'year', 'End Month': 'month', 'End Day': 'day'})
     df['End Date'] = pd.to_datetime(end_date_df)
     
-    # Create Duration feature (in days)
+    # Create a new feature: Duration (in days)
     df['Duration'] = (df['End Date'] - df['Start Date']).dt.days.fillna(0)
     
-    # Drop original date columns
+    # Drop original date columns (they've been processed)
     df.drop(columns=['Start Year', 'Start Month', 'Start Day',
                      'End Year', 'End Month', 'End Day',
                      'Start Date', 'End Date'], inplace=True)
     
-    # -----------------------------
+    # =============================================================================
     # 3. ENCODING CATEGORICAL VARIABLES
-    # -----------------------------
+    # =============================================================================
     # Label Encode the target: 'Disaster Type'
     label_encoder = LabelEncoder()
     df['Disaster Type'] = label_encoder.fit_transform(df['Disaster Type'])
@@ -93,11 +83,15 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.9):
     # One-hot encode Country, Disaster Group, and Disaster Subgroup
     df = pd.get_dummies(df, columns=['Country', 'Disaster Group', 'Disaster Subgroup'], drop_first=True)
     
-    # -----------------------------
-    # 3b. DYNAMIC FEATURE SELECTION BASED ON CORRELATION
-    # -----------------------------
-    cols_to_drop = correlation_feature_selection(df, target_col='Disaster Type', corr_threshold=corr_threshold)
-    print("Columns dropped due to high correlation:", cols_to_drop)
+    # =============================================================================
+    # NEW STEP: DROP LOW-CORRELATION FEATURES
+    # =============================================================================
+    cols_to_drop = drop_low_correlation_features(df, target_col='Disaster Type', corr_threshold=corr_threshold)
+    print("Columns dropped due to low correlation with target:", cols_to_drop)
+    
+    cols_kept = [col for col in df.columns if col not in cols_to_drop]
+    print("Columns kept after dropping low correlation features:", cols_kept)
+    
     df.drop(columns=cols_to_drop, inplace=True)
     
     # Save the processed dataframe to CSV
@@ -106,5 +100,4 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.9):
     return df
 
 if __name__ == "__main__":
-    # Adjust the file paths if needed.
-    load_and_preprocess_data("naturalDisasters.xlsx", "processedNaturalDisasters.csv", corr_threshold=0.9)
+    load_and_preprocess_data("naturalDisasters.xlsx", "processed_naturalDisasters.csv", corr_threshold=0.1)
