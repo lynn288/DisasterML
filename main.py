@@ -9,7 +9,7 @@ import time
 BASE_DIR = "C:\\Users\\bryan\\Desktop\\INF2008-main" #Change this to the respective directory
 
 DATA_PROCESSING_SCRIPT = os.path.join(BASE_DIR, "dataProcessing.py")
-MODEL_TRAINING_SCRIPT = os.path.join(BASE_DIR, "naturalDisasters.py")
+MODEL_TRAINING_SCRIPT = os.path.join(BASE_DIR, "naturalDisastersV2.py")
 GUI_SCRIPT = os.path.join(BASE_DIR, "simpleGui.py")
 
 DATA_FILE = os.path.join(BASE_DIR, "naturalDisasters.xlsx") #Make sure these files are also in the BASE_DIR
