@@ -6,11 +6,11 @@ import time
 # ==========================================
 # 1. Define File Paths
 # ==========================================
-BASE_DIR = "C:\\Users\\blade\\Downloads\\INF2008-main" #Change this to the respective directory
+BASE_DIR = "" #Change this to the respective directory
 
 DATA_PROCESSING_SCRIPT = os.path.join(BASE_DIR, "dataProcessing.py")
 MODEL_TRAINING_SCRIPT = os.path.join(BASE_DIR, "naturalDisastersV2.py")
-#GUI_SCRIPT = os.path.join(BASE_DIR, "simpleGui.py")
+GUI_SCRIPT = os.path.join(BASE_DIR, "simpleGui.py")
 
 DATA_FILE = os.path.join(BASE_DIR, "naturalDisasters.xlsx") #Make sure these files are also in the BASE_DIR
 PROCESSED_DATA_FILE = os.path.join(BASE_DIR, "processedNaturalDisasters.csv")
@@ -68,6 +68,6 @@ if __name__ == "__main__":
     # ========================
     # Step 3: Run GUI
     # ========================
-    #print("\nLaunching Disaster Prediction GUI...")
-    #gui_thread = threading.Thread(target=run_script, args=(GUI_SCRIPT,))
-    #gui_thread.start()
+    print("\nLaunching Disaster Prediction GUI...")
+    gui_thread = threading.Thread(target=run_script, args=(GUI_SCRIPT,))
+    gui_thread.start()

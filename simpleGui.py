@@ -4,53 +4,99 @@ import numpy as np
 import pandas as pd
 import pickle
 from xgboost import XGBClassifier
+import datetime
 
 # ===================================
-# 1. Load the Trained XGBoost Model
+# 1. Load the Trained XGBoost Model and Scaler
 # ===================================
 with open("xgb_model.pkl", "rb") as file:
     xgb_model = pickle.load(file)
+with open("scaler.pkl", "rb") as file:
+    scaler = pickle.load(file)
 
-# Load dataset to extract necessary details
-df = pd.read_excel('naturalDisasters.xlsx')
+# Load the processed CSV to obtain the original feature names
+df_processed = pd.read_csv('processedNaturalDisasters.csv')
+original_features = list(df_processed.select_dtypes(exclude=['object']).drop(columns=['Disaster Occurred']).columns)
 
-# Extract unique country names (ensure uniformity)
-df["Country"] = df["Country"].str.strip()  # Remove spaces
-unique_countries = df["Country"].dropna().unique()
-unique_countries.sort()
+# Get unique countries from the processed dataset (to match training)
+countries_in_data = [col.replace("Country_", "") for col in df_processed.columns if col.startswith("Country_")]
+unique_countries = sorted(countries_in_data)  # Ensure it's sorted
 
-# Extract unique years from dataset
-unique_years = df["Start Year"].dropna().astype(int).unique()
-unique_years.sort()
-
-# Define month mapping
+# Month mapping for dropdown selection
 month_mapping = {
     "January": 1, "February": 2, "March": 3, "April": 4,
     "May": 5, "June": 6, "July": 7, "August": 8,
     "September": 9, "October": 10, "November": 11, "December": 12
 }
 
-# Get the original training features for one-hot encoding consistency
-original_features = list(pd.get_dummies(df.drop(columns=["Disaster Type"]), drop_first=True).columns)
+# ===================================
+# 2. Predict All Future Disasters
+# ===================================
+def predict_all_disasters(xgb_model, scaler, unique_countries, start_year, end_year):
+    predictions = []
+    for country in unique_countries:
+        for year in range(start_year, end_year + 1):
+            for month in range(1, 13):
+                input_dict = {
+                    "Year": year,
+                    "Month": month,
+                    "Duration": 0  
+                }
+                input_df = pd.DataFrame([input_dict])
+
+                # Create one-hot encoded country columns
+                country_columns = {f"Country_{c}": 0 for c in unique_countries}  # Default all to 0
+                if f"Country_{country}" in country_columns:
+                    country_columns[f"Country_{country}"] = 1  # Set selected country to 1
+
+                country_df = pd.DataFrame([country_columns])
+                input_df = pd.concat([input_df, country_df], axis=1)
+
+                # Ensure all features match the trained model
+                for col in original_features:
+                    if col not in input_df.columns:
+                        input_df[col] = 0
+
+                input_df = input_df[original_features]  # Keep column order
+                input_scaled = scaler.transform(input_df)
+                pred = xgb_model.predict(input_scaled)[0]
+
+                if pred == 1:
+                    predictions.append((year, month, country))
+
+    predictions.sort(key=lambda x: (x[0], x[1]))  # Sort by year, then month
+    return predictions
+
+# Get predictions for the next 5 years
+current_year = datetime.datetime.now().year
+future_end_year = current_year + 5  
+future_disasters = predict_all_disasters(xgb_model, scaler, unique_countries, current_year, future_end_year)
+
+# Print predicted disasters in the console
+print("\n### All Future Predicted Disasters ###")
+if future_disasters:
+    for year, month, country in future_disasters:
+        print(f"- {country}: {month}/{year}")
+else:
+    print("No disasters predicted in the next 5 years.")
 
 # ===================================
-# 2. Define Tkinter GUI
+# 3. Define Tkinter GUI
 # ===================================
 class DisasterPredictionApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Natural Disaster Prediction")
-        self.root.geometry("450x350")
+        self.root.title("Disaster Prediction")
+        self.root.geometry("500x400")
 
-        # Title Label
-        ttk.Label(root, text="Disaster Prediction", font=("Arial", 14)).pack(pady=10)
+        ttk.Label(root, text="Disaster Occurrence Prediction", font=("Arial", 14)).pack(pady=10)
 
         # Country Selection
         ttk.Label(root, text="Select Country:").pack()
         self.country_var = tk.StringVar()
         self.country_dropdown = ttk.Combobox(root, textvariable=self.country_var, values=list(unique_countries))
         self.country_dropdown.pack(pady=5)
-        
+
         # Month Selection
         ttk.Label(root, text="Select Month:").pack()
         self.month_var = tk.StringVar()
@@ -60,77 +106,58 @@ class DisasterPredictionApp:
         # Year Selection
         ttk.Label(root, text="Select Year:").pack()
         self.year_var = tk.StringVar()
-        self.year_dropdown = ttk.Combobox(root, textvariable=self.year_var, values=[str(year) for year in range(2024, 2035)])  # Future years
+        self.year_dropdown = ttk.Combobox(root, textvariable=self.year_var, values=[str(y) for y in range(2024, 2031)])
         self.year_dropdown.pack(pady=5)
 
-        # Predict Button
         self.predict_button = ttk.Button(root, text="Predict", command=self.make_prediction)
         self.predict_button.pack(pady=10)
 
-        # Result Label
-        self.result_label = ttk.Label(root, text="", font=("Arial", 12, "bold"))
-        self.result_label.pack(pady=10)
+        self.result_label = ttk.Label(root, text="Predictions:", font=("Arial", 12, "bold"))
+        self.result_label.pack(pady=5)
 
-    # =========================
-    # 3. Prediction Function
-    # =========================
+        # Listbox to display multiple predictions
+        self.result_listbox = tk.Listbox(root, height=10, width=50)
+        self.result_listbox.pack(pady=10)
+
     def make_prediction(self):
-        # Get user inputs
         selected_country = self.country_var.get().strip()
         selected_month = self.month_var.get()
         selected_year = self.year_var.get()
 
-        # Validate inputs
         if not selected_country or not selected_month or not selected_year:
             messagebox.showwarning("Input Error", "Please select a country, month, and year.")
             return
 
-        # Ensure country exists in the dataset
-        if selected_country not in unique_countries:
-            messagebox.showerror("Error", f"Country '{selected_country}' not found in dataset.")
-            return
-
-        # Convert categorical inputs into numerical values
-        month_encoded = month_mapping[selected_month]  # Convert month name to number
-        year_encoded = int(selected_year)  # Convert year to integer
-
-        # Create DataFrame for input features
-        input_data = pd.DataFrame(columns=original_features)  # Empty DataFrame with training feature names
-
-        # Fill numeric values
-        input_data.loc[0, "Start Year"] = year_encoded
-        input_data.loc[0, "Start Month"] = month_encoded
-
-        # Handle country one-hot encoding (set 1 for selected country, 0 for others)
-        country_column = f"Country_{selected_country}"
-        if country_column in input_data.columns:
-            input_data.loc[0, country_column] = 1
-
-        # Fill missing one-hot encoded columns with 0
-        input_data.fillna(0, inplace=True)
-
-        # Ensure correct feature order
-        input_data = input_data[original_features]
-
-        # Convert to NumPy array for prediction
-        input_array = input_data.to_numpy()
-
-        # Make prediction
-        predicted_class = xgb_model.predict(input_array)[0]
-
-        # Convert numeric prediction back to disaster type
-        disaster_mapping = {
-            0: "No Disaster", 1: "Drought", 2: "Earthquake", 3: "Epidemic", 
-            4: "Extreme Temperature", 5: "Flood", 6: "Glacial Lake Outburst Flood", 
-            7: "Impact", 8: "Infestation", 9: "Mass Movement (Dry)", 
-            10: "Mass Movement (Wet)", 11: "Storm", 12: "Volcanic Activity", 13: "Wildfire"
+        # Create the input dataframe
+        input_dict = {
+            "Year": int(selected_year),
+            "Month": month_mapping[selected_month],
+            "Duration": 0
         }
+        input_df = pd.DataFrame([input_dict])
 
-        predicted_disaster = disaster_mapping.get(predicted_class, "Unknown Disaster")
+        # Create one-hot encoded columns for all countries (ensuring they exist)
+        country_columns = {f"Country_{c}": 0 for c in unique_countries}  # Default all to 0
+        if f"Country_{selected_country}" in country_columns:
+            country_columns[f"Country_{selected_country}"] = 1  # Set selected country to 1
 
-        # Display Result
-        self.result_label.config(text=f"Prediction: {predicted_disaster}", foreground="blue")
+        country_df = pd.DataFrame([country_columns])
+        input_df = pd.concat([input_df, country_df], axis=1)
 
+        # Ensure all features match the trained model
+        for col in original_features:
+            if col not in input_df.columns:
+                input_df[col] = 0
+
+        input_df = input_df[original_features]  # Keep column order
+        input_scaled = scaler.transform(input_df)
+        pred = xgb_model.predict(input_scaled)[0]
+
+        self.result_listbox.delete(0, tk.END)  # Clear previous results
+        if pred == 1:
+            self.result_listbox.insert(tk.END, f"Prediction: Disaster in {selected_country} ({selected_month} {selected_year})")
+        else:
+            self.result_listbox.insert(tk.END, "No disaster predicted for this selection.")
 
 # ===================================
 # 4. Run the GUI
