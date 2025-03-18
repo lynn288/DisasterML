@@ -14,7 +14,7 @@ import pickle
 # 4. PREPARING DATA FOR MODELING
 # =============================================================================
 # Load the processed CSV file
-df = pd.read_csv('processedNaturalDisasters.csv')
+df = pd.read_csv('processed_naturalDisasters.csv')
 
 # Define features (X) and target (y)
 X = df.drop(columns=['Disaster Type'])
