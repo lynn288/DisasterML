@@ -18,7 +18,7 @@ from imblearn.over_sampling import SMOTE
 # Load the processed CSV file (with binary target)
 df = pd.read_csv('processedNaturalDisasters.csv')
 
-# Select only numeric columns (exclude string columns)  
+# Select only numeric columns (exclude string columns)
 numeric_df = df.select_dtypes(exclude=['object'])  #Only numeric columns for modeling
 X = numeric_df.drop(columns=['Disaster Occurred'])  # Exclude target column
 y = numeric_df['Disaster Occurred']  # Target remains numeric
@@ -44,20 +44,20 @@ X_test_scaled = scaler.transform(X_test)
 # 5. MODEL TRAINING
 # =============================================================================
 # 5a. Random Forest Classifier with hyperparameters as provided
-rf_model = RandomForestClassifier(n_estimators=200, max_depth=30, 
-                                  min_samples_split=2, min_samples_leaf=1, bootstrap=True, random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!! 
+rf_model = RandomForestClassifier(n_estimators=200, max_depth=30,
+                                  min_samples_split=2, min_samples_leaf=1, bootstrap=True, random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
 rf_model.fit(X_train_scaled, y_train)
 
 # 5b. XGBoost Classifier (binary objective) with hyperparameters as provided
-xgb_model = XGBClassifier(n_estimators=200, max_depth=3, learning_rate=0.2, 
-                          subsample=0.5, colsample_bytree=0.5, use_label_encoder=False, 
-                          eval_metric='mlogloss', random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!! 
+xgb_model = XGBClassifier(n_estimators=200, max_depth=3, learning_rate=0.2,
+                          subsample=0.5, colsample_bytree=0.5, use_label_encoder=False,
+                          eval_metric='mlogloss', random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
 xgb_model.fit(X_train_scaled, y_train)
 
 # 5c. CatBoost Classifier with hyperparameters as provided
-cat_model = CatBoostClassifier(iterations=200, learning_rate=0.1, depth=8, l2_leaf_reg=1, 
-                               border_count=32, loss_function='MultiClass', 
-                               random_seed=42, verbose=False)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!! 
+cat_model = CatBoostClassifier(iterations=200, learning_rate=0.1, depth=8, l2_leaf_reg=1,
+                               border_count=32, loss_function='MultiClass',
+                               random_seed=42, verbose=False)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
 cat_model.fit(X_train_scaled, y_train)
 
 # 5d. Ensemble Model: Voting Classifier (Soft Voting)
@@ -71,23 +71,84 @@ ensemble_model.fit(X_train_scaled, y_train)
 # =============================================================================
 # 6. MODEL EVALUATION
 # =============================================================================
+# Get predictions from each model (test set)
 y_pred_ensemble = ensemble_model.predict(X_test_scaled)
 y_pred_rf = rf_model.predict(X_test_scaled)
 y_pred_xgb = xgb_model.predict(X_test_scaled)
 y_pred_cat = cat_model.predict(X_test_scaled)
 
+# Get predictions from each model (training set) for overfitting check
+y_pred_ensemble_train = ensemble_model.predict(X_train_scaled)
+y_pred_rf_train = rf_model.predict(X_train_scaled)
+y_pred_xgb_train = xgb_model.predict(X_train_scaled)
+y_pred_cat_train = cat_model.predict(X_train_scaled)
+
+# Calculate accuracies for both test and train sets
+test_acc_ensemble = accuracy_score(y_test, y_pred_ensemble)
+train_acc_ensemble = accuracy_score(y_train, y_pred_ensemble_train)
+
+test_acc_rf = accuracy_score(y_test, y_pred_rf)
+train_acc_rf = accuracy_score(y_train, y_pred_rf_train)
+
+test_acc_xgb = accuracy_score(y_test, y_pred_xgb)
+train_acc_xgb = accuracy_score(y_train, y_pred_xgb_train)
+
+test_acc_cat = accuracy_score(y_test, y_pred_cat)
+train_acc_cat = accuracy_score(y_train, y_pred_cat_train)
+
 print("Ensemble Accuracy:", accuracy_score(y_test, y_pred_ensemble))
 print("Ensemble ROC-AUC:", roc_auc_score(y_test, ensemble_model.predict_proba(X_test_scaled)[:,1]))
 print("\nEnsemble Classification Report:\n", classification_report(y_test, y_pred_ensemble, zero_division=0))
+print("Overfitting Check:")
+print(f"   Train Accuracy: {train_acc_ensemble:.4f}")
+print(f"   Test Accuracy:  {test_acc_ensemble:.4f}")
+print(f"   Gap (Train-Test): {train_acc_ensemble - test_acc_ensemble:.4f}")
+print(f"   Overfitting Ratio: {train_acc_ensemble/test_acc_ensemble:.4f}\n")
 
 print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))
 print("Random Forest Classification Report:\n", classification_report(y_test, y_pred_rf, zero_division=0))
+print("Overfitting Check:")
+print(f"   Train Accuracy: {train_acc_rf:.4f}")
+print(f"   Test Accuracy:  {test_acc_rf:.4f}")
+print(f"   Gap (Train-Test): {train_acc_rf - test_acc_rf:.4f}")
+print(f"   Overfitting Ratio: {train_acc_rf/test_acc_rf:.4f}\n")
 
 print("XGBoost Accuracy:", accuracy_score(y_test, y_pred_xgb))
 print("XGBoost Classification Report:\n", classification_report(y_test, y_pred_xgb, zero_division=0))
+print("Overfitting Check:")
+print(f"   Train Accuracy: {train_acc_xgb:.4f}")
+print(f"   Test Accuracy:  {test_acc_xgb:.4f}")
+print(f"   Gap (Train-Test): {train_acc_xgb - test_acc_xgb:.4f}")
+print(f"   Overfitting Ratio: {train_acc_xgb/test_acc_xgb:.4f}\n")
 
 print("CatBoost Accuracy:", accuracy_score(y_test, y_pred_cat))
 print("CatBoost Classification Report:\n", classification_report(y_test, y_pred_cat, zero_division=0))
+print("Overfitting Check:")
+print(f"   Train Accuracy: {train_acc_cat:.4f}")
+print(f"   Test Accuracy:  {test_acc_cat:.4f}")
+print(f"   Gap (Train-Test): {train_acc_cat - test_acc_cat:.4f}")
+print(f"   Overfitting Ratio: {train_acc_cat/test_acc_cat:.4f}\n")
+
+# Summary table for all models
+print("\nOverfitting Summary Table:")
+models = ["Ensemble", "Random Forest", "XGBoost", "CatBoost"]
+train_accs = [train_acc_ensemble, train_acc_rf, train_acc_xgb, train_acc_cat]
+test_accs = [test_acc_ensemble, test_acc_rf, test_acc_xgb, test_acc_cat]
+gaps = [train - test for train, test in zip(train_accs, test_accs)]
+ratios = [train/test for train, test in zip(train_accs, test_accs)]
+
+summary_df = pd.DataFrame({
+    'Model': models,
+    'Train Accuracy': train_accs,
+    'Test Accuracy': test_accs,
+    'Gap (Overfitting)': gaps,
+    'Overfitting Ratio': ratios
+})
+print(summary_df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+
+# Add extra new line to make it readable
+print()
+print()
 
 # Combine all confusion matrices in one figure (2x2 grid)
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
@@ -113,6 +174,22 @@ axes[1, 1].set_xlabel('Predicted')
 axes[1, 1].set_ylabel('Actual')
 
 plt.tight_layout()
+plt.show()
+
+# Plot train vs test accuracy comparison
+plt.figure(figsize=(10, 6))
+x = np.arange(len(models))
+width = 0.35
+
+plt.bar(x - width/2, train_accs, width, label='Train Accuracy')
+plt.bar(x + width/2, test_accs, width, label='Test Accuracy')
+
+plt.ylabel('Accuracy')
+plt.title('Train vs Test Accuracy Comparison')
+plt.xticks(x, models)
+plt.legend()
+plt.tight_layout()
+plt.savefig('train_vs_test_accuracy.png')
 plt.show()
 
 # =============================================================================
