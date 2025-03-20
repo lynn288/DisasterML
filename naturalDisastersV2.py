@@ -174,7 +174,8 @@ axes[1, 1].set_xlabel('Predicted')
 axes[1, 1].set_ylabel('Actual')
 
 plt.tight_layout()
-plt.show()
+plt.savefig("confusion_matrices.png")
+plt.close()
 
 # Plot train vs test accuracy comparison
 plt.figure(figsize=(10, 6))
@@ -190,7 +191,7 @@ plt.xticks(x, models)
 plt.legend()
 plt.tight_layout()
 plt.savefig('train_vs_test_accuracy.png')
-plt.show()
+plt.close()
 
 # =============================================================================
 # 7. SAVE MODELS AND SCALER
@@ -199,8 +200,14 @@ with open("ensemble_model.pkl", "wb") as file:
     pickle.dump(ensemble_model, file)
 with open("rf_model.pkl", "wb") as file:
     pickle.dump(rf_model, file)
+
 with open("xgb_model.pkl", "wb") as file:
     pickle.dump(xgb_model, file)
+with open("X_test_scaled.pkl", "wb") as f:
+    pickle.dump(X_test_scaled, f)
+with open("y_test.pkl", "wb") as f:
+    pickle.dump(y_test, f)
+
 with open("catboost_model.pkl", "wb") as file:
     pickle.dump(cat_model, file)
 with open("scaler.pkl", "wb") as file:
