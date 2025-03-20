@@ -5,6 +5,11 @@ import pandas as pd
 import pickle
 from xgboost import XGBClassifier
 import datetime
+import os
+
+# For graphs stuff
+from graphs import disaster_frequency_by_region, extent_of_disasters_by_region, choropleth_damage_and_deaths, plot_roc_curve
+
 
 # ===================================
 # 1. Load the Trained XGBoost Model and Scaler
@@ -13,6 +18,12 @@ with open("xgb_model.pkl", "rb") as file:
     xgb_model = pickle.load(file)
 with open("scaler.pkl", "rb") as file:
     scaler = pickle.load(file)
+
+#also load test data
+with open("X_test_scaled.pkl", "rb") as file:
+    X_test_scaled = pickle.load(file)
+with open("y_test.pkl", "rb") as file:
+    y_test = pickle.load(file)
 
 df_processed = pd.read_csv('processedNaturalDisasters.csv')
 original_features = list(df_processed.select_dtypes(exclude=['object']).drop(columns=['Disaster Occurred']).columns)
@@ -105,6 +116,12 @@ def find_next_n_predictions(xgb_model, scaler, unique_countries, n, start_year, 
                 year += 1
         return predictions
 
+def open_file(file_path):
+    if os.path.exists(file_path):
+        os.startfile(file_path)
+    else:
+        messagebox.showerror("File Not Found", f"File '{file_path}' does not exist.")
+
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Should we comment this out and state its for testing?
 # Get predictions for the next 5 years
@@ -127,26 +144,26 @@ class DisasterPredictionApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Disaster Prediction")
-        self.root.geometry("500x400")
+        self.root.geometry("500x700")
 
         ttk.Label(root, text="Disaster Occurrence Prediction", font=("Arial", 14)).pack(pady=10)
 
         # Country Selection
         ttk.Label(root, text="Select Country:").pack()
         self.country_var = tk.StringVar()
-        self.country_dropdown = ttk.Combobox(root, textvariable=self.country_var, values=list(unique_countries))
+        self.country_dropdown = ttk.Combobox(root, textvariable=self.country_var, values=list(unique_countries), state="readonly")
         self.country_dropdown.pack(pady=5)
 
         # Month Selection
         ttk.Label(root, text="Select Month:").pack()
         self.month_var = tk.StringVar()
-        self.month_dropdown = ttk.Combobox(root, textvariable=self.month_var, values=list(month_mapping.keys()))
+        self.month_dropdown = ttk.Combobox(root, textvariable=self.month_var, values=list(month_mapping.keys()), state="readonly")
         self.month_dropdown.pack(pady=5)
 
         # Year Selection
         ttk.Label(root, text="Select Year:").pack()
         self.year_var = tk.StringVar()
-        self.year_dropdown = ttk.Combobox(root, textvariable=self.year_var, values=[str(y) for y in range(2024, 2031)])
+        self.year_dropdown = ttk.Combobox(root, textvariable=self.year_var, values=[str(y) for y in range(2025, 2031)], state="readonly")
         self.year_dropdown.pack(pady=5)
 
         self.predict_button = ttk.Button(root, text="Predict", command=self.make_prediction)
@@ -162,6 +179,31 @@ class DisasterPredictionApp:
         # Display multiple predictions
         self.result_listbox = tk.Listbox(root, height=10, width=50)
         self.result_listbox.pack(pady=10)
+
+        # Button to display the disaster frequency graph
+        self.graph_button = ttk.Button(root, text="Show Disaster Frequency Graph", command=disaster_frequency_by_region)
+        self.graph_button.pack(pady=5)
+
+        # Button to display extent of disaster by region graph
+        self.extent_graph_button = ttk.Button(root, text="Show Extent of Disasters Graph", command=extent_of_disasters_by_region)
+        self.extent_graph_button.pack(pady=5)
+
+        # button to show map
+        self.map_button = ttk.Button(root, text="Show Damage Map", command=choropleth_damage_and_deaths)
+        self.map_button.pack(pady=5)
+
+        #button for showing ROC curve
+        self.roc_curve_button = ttk.Button(root, text="Show ROC Curve (XGB)", command=lambda: plot_roc_curve(xgb_model, X_test_scaled, y_test))
+        self.roc_curve_button.pack(pady=5)
+
+        #button for viewing confusion matrices
+        self.view_confusion_button = ttk.Button(root, text="View Confusion Matrices", command=lambda: open_file("confusion_matrices.png"))
+        self.view_confusion_button.pack(pady=5)
+
+        # Button for viewing training vs test accuracy
+        self.view_accuracy_button = ttk.Button(root, text="View Train vs Test Accuracy", command=lambda: open_file("train_vs_test_accuracy.png"))
+        self.view_accuracy_button.pack(pady=5)
+        
 
     def make_prediction(self):
         selected_country = self.country_var.get().strip()
