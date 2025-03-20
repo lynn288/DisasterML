@@ -251,7 +251,7 @@ def plot_roc_curve(model, X_test, y_test):
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic for XGB Model')
+    plt.title('Receiver Operating Characteristic for Ensemble Model')
     plt.legend(loc="lower right")
     plt.tight_layout()
     plt.show()
