@@ -7,7 +7,7 @@
 - [Requirements](#requirements)
 - [Installation / Setup](#installation/Setup)
 - [Usage](#usage)
-  - [Running the Project](#running-the-project)
+  - [Running the Project](#runningTheproject)
   - [Using the GUI](#gui)
 - [Troubleshooting](#troubleshooting)
 
@@ -57,6 +57,7 @@ If the trained model file does not exist, "naturalDisastersV2.py" is executed to
 **3. Launching the GUI:**
 Finally, "simpleGui.py" is launched.
 
+<a name="runningTheproject"></a>
 ### To run the project:
 ```bash
 python main.py
