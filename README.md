@@ -5,10 +5,10 @@
 ## Table of Contents
 
 - [Requirements](#requirements)
-- [Installation / Setup](#installation)
+- [Installation / Setup](#installation/Setup)
 - [Usage](#usage)
   - [Running the Project](#running-the-project)
-  - [Using the GUI](#using-the-gui)
+  - [Using the GUI](#gui)
 - [Troubleshooting](#troubleshooting)
 
 ## Requirements
@@ -28,6 +28,7 @@ The following Python packages are required (Provided in the requirements.txt fil
 
 ---
 
+<a name="installation/setup"></a>
 ## Installation / Setup
 
 ### 1. Clone the repo:
@@ -60,7 +61,7 @@ Finally, "simpleGui.py" is launched.
 ```bash
 python main.py
 ```
-
+<a name="gui"></a>
 ## Using the GUI
 Once the GUI launches, you can
 
