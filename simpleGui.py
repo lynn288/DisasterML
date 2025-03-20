@@ -19,7 +19,7 @@ with open("scaler.pkl", "rb") as file:
 
 # Load test data for ROC curve
 with open("xgb_model.pkl", "rb") as file:
-    xgb_model = pickle.load(file)  # Keep XGB model only for ROC curve
+    xgb_model = pickle.load(file)  
 with open("X_test_scaled.pkl", "rb") as file:
     X_test_scaled = pickle.load(file)
 with open("y_test.pkl", "rb") as file:
@@ -182,7 +182,7 @@ class DisasterPredictionApp:
         self.map_button.pack(pady=5)
 
         # Button for showing ROC curve
-        self.roc_curve_button = ttk.Button(root, text="Show ROC Curve (XGB)", command=lambda: plot_roc_curve(xgb_model, X_test_scaled, y_test))
+        self.roc_curve_button = ttk.Button(root, text="Show ROC Curve (Ensemble)", command=lambda: plot_roc_curve(ensemble_model, X_test_scaled, y_test))
         self.roc_curve_button.pack(pady=5)
 
         # Button for viewing confusion matrices
