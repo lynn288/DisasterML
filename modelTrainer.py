@@ -12,9 +12,7 @@ import pickle
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import SMOTE
 
-# =============================================================================
-# 4. PREPARING DATA FOR MODELING
-# =============================================================================
+
 # Load the processed CSV file (with binary target)
 df = pd.read_csv('processedNaturalDisasters.csv')
 
@@ -26,41 +24,36 @@ y = numeric_df['Disaster Occurred']  # Target remains numeric
 # Split the data into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# ========================== FIXED PART ==========================
-# Balance dataset to prevent bias toward China
+# Function to plot feature importances
 rus = RandomUnderSampler(sampling_strategy=0.5, random_state=42)
 X_train, y_train = rus.fit_resample(X_train, y_train)
 
 smote = SMOTE(sampling_strategy=0.8, random_state=42)
 X_train, y_train = smote.fit_resample(X_train, y_train)
 
-# ===============================================================
 # Scale numerical features
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# =============================================================================
-# 5. MODEL TRAINING
-# =============================================================================
-# 5a. Random Forest Classifier with hyperparameters as provided
+# Random Forest Classifier with hyperparameters as provided
 rf_model = RandomForestClassifier(n_estimators=200, max_depth=30,
                                   min_samples_split=2, min_samples_leaf=1, bootstrap=True, random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
 rf_model.fit(X_train_scaled, y_train)
 
-# 5b. XGBoost Classifier (binary objective) with hyperparameters as provided
+# XGBoost Classifier with hyperparameters as provided
 xgb_model = XGBClassifier(n_estimators=200, max_depth=3, learning_rate=0.2,
                           subsample=0.5, colsample_bytree=0.5, use_label_encoder=False,
                           eval_metric='mlogloss', random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
 xgb_model.fit(X_train_scaled, y_train)
 
-# 5c. CatBoost Classifier with hyperparameters as provided
+# CatBoost Classifier with hyperparameters as provided
 cat_model = CatBoostClassifier(iterations=200, learning_rate=0.1, depth=8, l2_leaf_reg=1,
                                border_count=32, loss_function='MultiClass',
                                random_seed=42, verbose=False)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
 cat_model.fit(X_train_scaled, y_train)
 
-# 5d. Ensemble Model: Voting Classifier (Soft Voting)
+# Ensemble Model: Voting Classifier (Soft Voting)
 ensemble_model = VotingClassifier(estimators=[
     ('rf', rf_model),
     ('xgb', xgb_model),
@@ -68,9 +61,6 @@ ensemble_model = VotingClassifier(estimators=[
 ], voting='soft')
 ensemble_model.fit(X_train_scaled, y_train)
 
-# =============================================================================
-# 6. MODEL EVALUATION
-# =============================================================================
 # Get predictions from each model (test set)
 y_pred_ensemble = ensemble_model.predict(X_test_scaled)
 y_pred_rf = rf_model.predict(X_test_scaled)
@@ -87,15 +77,20 @@ y_pred_cat_train = cat_model.predict(X_train_scaled)
 test_acc_ensemble = accuracy_score(y_test, y_pred_ensemble)
 train_acc_ensemble = accuracy_score(y_train, y_pred_ensemble_train)
 
+# Calculate accuracies for both test and train sets for Random Forest, XGBoost, and CatBoost
+# Random Forest
 test_acc_rf = accuracy_score(y_test, y_pred_rf)
 train_acc_rf = accuracy_score(y_train, y_pred_rf_train)
 
+# XGBoost
 test_acc_xgb = accuracy_score(y_test, y_pred_xgb)
 train_acc_xgb = accuracy_score(y_train, y_pred_xgb_train)
 
+# CatBoost
 test_acc_cat = accuracy_score(y_test, y_pred_cat)
 train_acc_cat = accuracy_score(y_train, y_pred_cat_train)
 
+# Display the results
 print("Ensemble Accuracy:", accuracy_score(y_test, y_pred_ensemble))
 print("Ensemble ROC-AUC:", roc_auc_score(y_test, ensemble_model.predict_proba(X_test_scaled)[:,1]))
 print("\nEnsemble Classification Report:\n", classification_report(y_test, y_pred_ensemble, zero_division=0))
@@ -137,6 +132,7 @@ test_accs = [test_acc_ensemble, test_acc_rf, test_acc_xgb, test_acc_cat]
 gaps = [train - test for train, test in zip(train_accs, test_accs)]
 ratios = [train/test for train, test in zip(train_accs, test_accs)]
 
+# Create a summary DataFrame
 summary_df = pd.DataFrame({
     'Model': models,
     'Train Accuracy': train_accs,
@@ -153,26 +149,32 @@ print()
 # Combine all confusion matrices in one figure (2x2 grid)
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
+# Plot confusion matrices
+# Ensemble Model
 sns.heatmap(confusion_matrix(y_test, y_pred_ensemble), annot=True, fmt='d', cmap='Blues', ax=axes[0, 0])
 axes[0, 0].set_title('Ensemble Model Confusion Matrix')
 axes[0, 0].set_xlabel('Predicted')
 axes[0, 0].set_ylabel('Actual')
 
+# Random Forest
 sns.heatmap(confusion_matrix(y_test, y_pred_rf), annot=True, fmt='d', cmap='Blues', ax=axes[0, 1])
 axes[0, 1].set_title('Random Forest Confusion Matrix')
 axes[0, 1].set_xlabel('Predicted')
 axes[0, 1].set_ylabel('Actual')
 
+# XGBoost
 sns.heatmap(confusion_matrix(y_test, y_pred_xgb), annot=True, fmt='d', cmap='Blues', ax=axes[1, 0])
 axes[1, 0].set_title('XGBoost Confusion Matrix')
 axes[1, 0].set_xlabel('Predicted')
 axes[1, 0].set_ylabel('Actual')
 
+# CatBoost
 sns.heatmap(confusion_matrix(y_test, y_pred_cat), annot=True, fmt='d', cmap='Blues', ax=axes[1, 1])
 axes[1, 1].set_title('CatBoost Confusion Matrix')
 axes[1, 1].set_xlabel('Predicted')
 axes[1, 1].set_ylabel('Actual')
 
+# Adjust layout
 plt.tight_layout()
 plt.savefig("confusion_matrices.png")
 plt.close()
@@ -182,9 +184,11 @@ plt.figure(figsize=(10, 6))
 x = np.arange(len(models))
 width = 0.35
 
+# Plot bars
 plt.bar(x - width/2, train_accs, width, label='Train Accuracy')
 plt.bar(x + width/2, test_accs, width, label='Test Accuracy')
 
+# Add labels, title, and legend
 plt.ylabel('Accuracy')
 plt.title('Train vs Test Accuracy Comparison')
 plt.xticks(x, models)
@@ -193,14 +197,16 @@ plt.tight_layout()
 plt.savefig('train_vs_test_accuracy.png')
 plt.close()
 
-# =============================================================================
-# 7. SAVE MODELS AND SCALER
-# =============================================================================
+# Save the models and the scaler
+# Ensemble Model
 with open("ensemble_model.pkl", "wb") as file:
     pickle.dump(ensemble_model, file)
+    
+# Random Forest Model
 with open("rf_model.pkl", "wb") as file:
     pickle.dump(rf_model, file)
 
+# XGBoost Model
 with open("xgb_model.pkl", "wb") as file:
     pickle.dump(xgb_model, file)
 with open("X_test_scaled.pkl", "wb") as f:
@@ -208,14 +214,15 @@ with open("X_test_scaled.pkl", "wb") as f:
 with open("y_test.pkl", "wb") as f:
     pickle.dump(y_test, f)
 
+# CatBoost Model
 with open("catboost_model.pkl", "wb") as file:
     pickle.dump(cat_model, file)
+
+# Scaler
 with open("scaler.pkl", "wb") as file:
     pickle.dump(scaler, file)
 
-# =============================================================================
-# 8. DISPLAY THE SAVED PICKLE FILES (OPTIONAL)
-# =============================================================================
+# Display the saved models
 def display_pickle(file_path, description):
     with open(file_path, "rb") as file:
         obj = pickle.load(file)

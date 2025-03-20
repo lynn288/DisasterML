@@ -3,17 +3,6 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 def drop_low_correlation_features(df, target_col, corr_threshold=0.1):
-    """
-    Drop features that have a low absolute correlation with the target variable.
-    
-    Parameters:
-        df (DataFrame): The input dataframe.
-        target_col (str): The name of the target column.
-        corr_threshold (float): The minimum absolute correlation to keep a feature.
-        
-    Returns:
-        List of columns to drop.
-    """
     # Select only numeric columns for correlation computation
     numeric_df = df.select_dtypes(include=[np.number])
     # Ensure the target column is included
@@ -28,22 +17,17 @@ def drop_low_correlation_features(df, target_col, corr_threshold=0.1):
     if target_col in drop_cols:
         drop_cols.remove(target_col)
     return drop_cols
-# Added on 18/3: Helper function to compute the mode (most frequent value).
+
+# Function to handle mode calculation for aggregation
 def mode_func(series):
-    """
-    Returns the most frequent value (mode) of the given Series.
-    If the Series is empty or has no mode, returns NaN.
-    """
     m = series.mode()
     return m.iloc[0] if not m.empty else np.nan
 
-
+# Function to load and preprocess the data
 def load_and_preprocess_data(input_file, output_file, corr_threshold=0.1):
-    # =============================================================================
-    # 1. DATA LOADING & INITIAL PREPROCESSING
-    # =============================================================================
-    #Upd on 18/3 removed deaths injuries column. 
     df = pd.read_excel(input_file)
+
+    # Columns needed for analysis
     columns_needed = [
         'Disaster Type', 'Country', 'Start Year', 'Start Month', 'Start Day',
         'End Year', 'End Month', 'End Day','Disaster Group', 'Disaster Subgroup'
@@ -58,9 +42,6 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.1):
         'End Day': -1
     })
     
-    # =============================================================================
-    # 2. DATE CONVERSION & FEATURE ENGINEERING
-    # =============================================================================
     # Convert Start Date
     start_date_df = df[['Start Year', 'Start Month', 'Start Day']].replace(-1, np.nan)\
                     .rename(columns={'Start Year': 'year', 'Start Month': 'month', 'Start Day': 'day'})
@@ -73,30 +54,22 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.1):
     
     # Create a new feature: Duration (in days)
     df['Duration'] = (df['End Date'] - df['Start Date']).dt.days.fillna(0)
-    #=========================================================================
-    #New update for 18/3
+
     # Create Year and Month columns from Start Date
     df['Year'] = df['Start Date'].dt.year
     df['Month'] = df['Start Date'].dt.month
     
-        # For binary prediction, mark each disaster occurrence as 1
+     # For binary prediction, mark each disaster occurrence as 1
     df['Disaster Occurred'] = 1
 
-    # =============================================================================
-    # 3. GROUPING & AGGREGATION Added on 18/3
-    # =============================================================================
-
-    # Group by Country, Year, and Month to aggregate occurrences and average duration
-    # - 'Disaster Occurred': Sum then convert to binary.
-    # - 'Duration': Mean value.
-    # - 'Disaster Group' and 'Disaster Subgroup': Take the mode (most frequent).
+    # Group by Country, Year, and Month
     df_grouped = df.groupby(['Country', 'Year', 'Month']).agg({
-        'Disaster Occurred': 'sum',
-        'Duration': 'mean',
-        'Disaster Type': mode_func,
-        'Disaster Group': mode_func,      # Added on 18/3: Aggregate Disaster Group by mode.
-        'Disaster Subgroup': mode_func    # Added on 18/3: Aggregate Disaster Subgroup by mode.
-    }).reset_index()
+        'Disaster Occurred': 'sum', # Count the number of disasters
+        'Duration': 'mean', # Average duration of disasters
+        'Disaster Type': mode_func, # Most frequent disaster type
+        'Disaster Group': mode_func, # Most frequent disaster group    
+        'Disaster Subgroup': mode_func   # Most frequent disaster subgroup
+    }).reset_index() # Convert the grouped data back to a DataFrame
     
     # Convert counts to binary flag (1 if any disaster occurred, else 0)
     df_grouped['Disaster Occurred'] = (df_grouped['Disaster Occurred'] > 0).astype(int)
@@ -106,18 +79,6 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.1):
                      'End Year', 'End Month', 'End Day',
                      'Start Date', 'End Date'], inplace=True)
     
-    # =============================================================================
-    # 3. ENCODING CATEGORICAL VARIABLES
-    # =============================================================================
-    # # Label Encode the target: 'Disaster Type'
-    # label_encoder = LabelEncoder()
-    # df['Disaster Type'] = label_encoder.fit_transform(df['Disaster Type'])
-    
-    # # One-hot encode Country, Disaster Group, and Disaster Subgroup
-    # df = pd.get_dummies(df, columns=['Country', 'Disaster Group', 'Disaster Subgroup'], drop_first=True)
-        # =============================================================================
-    # 4. COMPLETE GRID FOR COUNTRY YEAR MONTH added on 18/3
-    # =============================================================================
     # Get all unique countries from the grouped data
     all_countries = df_grouped['Country'].unique()
 
@@ -137,54 +98,32 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.1):
     df_merged['Disaster Occurred'] = df_merged['Disaster Occurred'].fillna(0).astype(int)
     df_merged['Duration'] = df_merged['Duration'].fillna(0)
 
-    # !!!!! We keep 'Disaster Type', 'Disaster Group', 'Disaster Subgroup' as strings
-    # !!!!! for display. If they are NaN, fill with 'None'.
-    df_merged['Disaster Type'] = df_merged['Disaster Type'].fillna('None')  #!!!!!
-    df_merged['Disaster Group'] = df_merged['Disaster Group'].fillna('None')  #!!!!!
-    df_merged['Disaster Subgroup'] = df_merged['Disaster Subgroup'].fillna('None')  #!!!!!
+    # Fill missing values for categorical columns
+    df_merged['Disaster Type'] = df_merged['Disaster Type'].fillna('None')  
+    df_merged['Disaster Group'] = df_merged['Disaster Group'].fillna('None')  
+    df_merged['Disaster Subgroup'] = df_merged['Disaster Subgroup'].fillna('None')
     
     # One-hot encode Country so the model can use it numerically
     df = pd.get_dummies(df_merged, columns=['Country'], drop_first=True)
 
-    # =============================================================================
-    # 5. ENCODING CATEGORICAL VARIABLES (Modified on 18/3)
-    # =============================================================================
-    # # One-hot encode Country, Disaster Group, and Disaster Subgroup so the model can use them numerically.
-    # df_processed = pd.get_dummies(df_merged, columns=['Country', 'Disaster Group', 'Disaster Subgroup'], drop_first=True)
-    
-
-    # =============================================================================
-    # 5. NEW STEP: DROP LOW-CORRELATION FEATURES modified on 18/3
-    # =============================================================================
-    # cols_to_drop = drop_low_correlation_features(df, target_col='Disaster Type', corr_threshold=corr_threshold)
-    # print("Columns dropped due to low correlation with target:", cols_to_drop)
-    
-    # cols_kept = [col for col in df.columns if col not in cols_to_drop]
-    # print("Columns kept after dropping low correlation features:", cols_kept)
-    
-    # df.drop(columns=cols_to_drop, inplace=True)
-    
-    # # Save the processed dataframe to CSV
-    # df.to_csv(output_file, index=False)
-    # print(f"Processed data saved to {output_file}")
-    # return df
-        # Use the new target 'Disaster Occurred' for dropping low-correlation features
+    # Encode categorical columns using LabelEncoder
     country_columns = [col for col in df.columns if col.startswith("Country_")]    
-    cols_to_drop = drop_low_correlation_features(df, target_col='Disaster Occurred', corr_threshold=corr_threshold)
-    print("Columns dropped due to low correlation with target:", cols_to_drop)
+    cols_to_drop = drop_low_correlation_features(df, target_col='Disaster Occurred', corr_threshold=corr_threshold) # Drop features with low correlation
+    print("Columns dropped due to low correlation with target:", cols_to_drop) 
     
+    # Keep only the columns with high correlation
     cols_kept = [col for col in df.columns if col not in cols_to_drop]
     print("Columns kept after dropping low correlation features:", cols_kept)
     
+    # Drop columns that are not needed for the model
     cols_to_drop = [col for col in cols_to_drop if col not in country_columns]
     df.drop(columns=cols_to_drop, inplace=True)
-    # =============================================================================
-    # 6. SAVE THE PROCESSED DATA
-    # =============================================================================
-        # Save the processed dataframe to CSV
+
+    # Save the processed data to a new file
     df.to_csv(output_file, index=False)
     print(f"Processed data saved to {output_file}")
     return df
 
+# Main function to run the data processing
 if __name__ == "__main__":
     load_and_preprocess_data("naturalDisasters.xlsx", "processedNaturalDisasters.csv", corr_threshold=0.1)

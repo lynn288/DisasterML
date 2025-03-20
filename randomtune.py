@@ -9,11 +9,11 @@ import seaborn as sns
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from sklearn.ensemble import ExtraTreesClassifier
-# =============================================================================
-# 1. DATA LOADING & INITIAL PREPROCESSING
-# =============================================================================
+
+# Read the dataset
 df = pd.read_excel('C:/Users/jocel/ml/naturalDisasters.xlsx')  # Replace with your file path
 
+# Display the first few rows of the dataset
 columns_needed = [
     'Disaster Type', 'Country', 'Start Year', 'Start Month', 'Start Day',
     'End Year', 'End Month', 'End Day', 'Total Deaths', 'No. Injured',
@@ -21,6 +21,7 @@ columns_needed = [
 ]
 df = df[columns_needed]
 
+# Fill missing values for numeric columns and assign placeholder for missing date parts
 df = df.fillna({
     'Total Deaths': 0,
     'No. Injured': 0,
@@ -31,25 +32,23 @@ df = df.fillna({
     'End Day': -1
 })
 
-# =============================================================================
-# 2. DATE CONVERSION & FEATURE ENGINEERING
-# =============================================================================
+# Convert Start Date
 start_date_df = df[['Start Year', 'Start Month', 'Start Day']].replace(-1, np.nan) \
                .rename(columns={'Start Year': 'year', 'Start Month': 'month', 'Start Day': 'day'})
 df['Start Date'] = pd.to_datetime(start_date_df)
 
+# Convert End Date
 end_date_df = df[['End Year', 'End Month', 'End Day']].replace(-1, np.nan) \
              .rename(columns={'End Year': 'year', 'End Month': 'month', 'End Day': 'day'})
 df['End Date'] = pd.to_datetime(end_date_df)
 
+# Create a new feature: Duration (in days)
 df['Duration'] = (df['End Date'] - df['Start Date']).dt.days.fillna(0)
 df.drop(columns=['Start Year', 'Start Month', 'Start Day',
                  'End Year', 'End Month', 'End Day',
                  'Start Date', 'End Date'], inplace=True)
 
-# =============================================================================
-# 3. ENCODING CATEGORICAL VARIABLES
-# =============================================================================
+# Create Year and Month columns from Start Date
 label_encoder = LabelEncoder()
 df['Disaster Type'] = label_encoder.fit_transform(df['Disaster Type'])
 mapping = dict(zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_)))
@@ -57,9 +56,7 @@ print("Label mapping for Disaster Type:", mapping)
 
 df = pd.get_dummies(df, columns=['Country', 'Disaster Group', 'Disaster Subgroup'], drop_first=True)
 
-# =============================================================================
-# 4. PREPARING DATA FOR MODELING
-# =============================================================================
+# Display the first few rows of the processed dataset
 X = df.drop(columns=['Disaster Type'])
 y = df['Disaster Type']
 
@@ -68,10 +65,6 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
-
-# =============================================================================
-# 5. HYPERPARAMETER COMBINATIONS & ACCURACY PRINTING
-# =============================================================================
 
 # --- Random Forest ---
 rf_param_grid = {
@@ -139,6 +132,7 @@ cat_param_grid = {
     'border_count': [32, 64, 128]
 }
 
+# Display the first few rows of the processed dataset
 print("\nCatBoost Hyperparameter Results (Accuracy):")
 for iterations in cat_param_grid['iterations']:
     for learning_rate in cat_param_grid['learning_rate']:

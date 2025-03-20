@@ -11,36 +11,37 @@ import os
 from graphs import disaster_frequency_by_region, extent_of_disasters_by_region, choropleth_damage_and_deaths, plot_roc_curve
 
 
-# ===================================
-# 1. Load the Trained XGBoost Model and Scaler
-# ===================================
-with open("xgb_model.pkl", "rb") as file:
-    xgb_model = pickle.load(file)
+# Load the ensemble model and scaler
+with open("ensemble_model.pkl", "rb") as file:
+    ensemble_model = pickle.load(file)
 with open("scaler.pkl", "rb") as file:
     scaler = pickle.load(file)
 
-#also load test data
+# Load test data for ROC curve
+with open("xgb_model.pkl", "rb") as file:
+    xgb_model = pickle.load(file)  # Keep XGB model only for ROC curve
 with open("X_test_scaled.pkl", "rb") as file:
     X_test_scaled = pickle.load(file)
 with open("y_test.pkl", "rb") as file:
     y_test = pickle.load(file)
 
+# Load the processed data and original features
 df_processed = pd.read_csv('processedNaturalDisasters.csv')
 original_features = list(df_processed.select_dtypes(exclude=['object']).drop(columns=['Disaster Occurred']).columns)
 
+# Extract unique countries from the processed data
 countries_in_data = [col.replace("Country_", "") for col in df_processed.columns if col.startswith("Country_")]
 unique_countries = sorted(countries_in_data)  # Ensure it's sorted
 
+# Mapping of month names to numbers
 month_mapping = {
     "January": 1, "February": 2, "March": 3, "April": 4,
     "May": 5, "June": 6, "July": 7, "August": 8,
     "September": 9, "October": 10, "November": 11, "December": 12
 }
 
-# ===================================
-# 2. Predict All Future Disasters
-# ===================================
-def predict_all_disasters(xgb_model, scaler, unique_countries, start_year, end_year):
+# Function to predict all disasters
+def predict_all_disasters(ensemble_model, scaler, unique_countries, start_year, end_year):
     predictions = []
     for country in unique_countries:
         for year in range(start_year, end_year + 1):
@@ -66,17 +67,16 @@ def predict_all_disasters(xgb_model, scaler, unique_countries, start_year, end_y
 
                 input_df = input_df[original_features]  # Keep column order
                 input_scaled = scaler.transform(input_df)
-                pred = xgb_model.predict(input_scaled)[0]
+                pred = ensemble_model.predict(input_scaled)[0]
 
                 if pred == 1:
                     predictions.append((year, month, country))
 
     predictions.sort(key=lambda x: (x[0], x[1]))  # Sort by year, then month
     return predictions
-# ===================================
-# 3. Predict Next n Future Disasters
-# ===================================
-def find_next_n_predictions(xgb_model, scaler, unique_countries, n, start_year, start_month):
+
+# Function to find the next and disaster predictions
+def find_next_n_predictions(ensemble_model, scaler, unique_countries, n, start_year, start_month):
         predictions = []
         year = start_year
         month = start_month
@@ -92,19 +92,24 @@ def find_next_n_predictions(xgb_model, scaler, unique_countries, n, start_year, 
                 
                 # Create one-hot encoded country columns
                 country_columns = {f"Country_{c}": 0 for c in unique_countries}
-                if f"Country_{country}" in country_columns:
+                
+                # Ensure the selected country exists in the columns
+                if f"Country_{country}" in country_columns: 
                     country_columns[f"Country_{country}"] = 1
                 country_df = pd.DataFrame([country_columns])
                 input_df = pd.concat([input_df, country_df], axis=1)
 
+                # Ensure all original features are present
                 for col in original_features:
                     if col not in input_df.columns:
                         input_df[col] = 0
                 input_df = input_df[original_features]
-                
+
+                # Scale the input data
                 input_scaled = scaler.transform(input_df)
-                pred = xgb_model.predict(input_scaled)[0]
+                pred = ensemble_model.predict(input_scaled)[0]
                 
+                # If disaster is predicted, add to the list
                 if pred == 1:
                     predictions.append((year, month, country))
                     if len(predictions) >= n:
@@ -116,30 +121,14 @@ def find_next_n_predictions(xgb_model, scaler, unique_countries, n, start_year, 
                 year += 1
         return predictions
 
+# Function to open a file
 def open_file(file_path):
     if os.path.exists(file_path):
         os.startfile(file_path)
     else:
         messagebox.showerror("File Not Found", f"File '{file_path}' does not exist.")
 
-
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Should we comment this out and state its for testing?
-# Get predictions for the next 5 years
-# current_year = datetime.datetime.now().year
-# future_end_year = current_year + 5  
-# future_disasters = predict_all_disasters(xgb_model, scaler, unique_countries, current_year, future_end_year)
-
-# # Print predicted disasters in the console
-# print("\n### All Future Predicted Disasters ###")
-# if future_disasters:
-#     for year, month, country in future_disasters:
-#         print(f"- {country}: {month}/{year}")
-# else:
-#     print("No disasters predicted in the next 5 years.")
-
-# ===================================
-# 3. Define Tkinter GUI
-# ===================================
+# Define the GUI class
 class DisasterPredictionApp:
     def __init__(self, root):
         self.root = root
@@ -188,15 +177,15 @@ class DisasterPredictionApp:
         self.extent_graph_button = ttk.Button(root, text="Show Extent of Disasters Graph", command=extent_of_disasters_by_region)
         self.extent_graph_button.pack(pady=5)
 
-        # button to show map
+        # Button to show map
         self.map_button = ttk.Button(root, text="Show Damage Map", command=choropleth_damage_and_deaths)
         self.map_button.pack(pady=5)
 
-        #button for showing ROC curve
+        # Button for showing ROC curve
         self.roc_curve_button = ttk.Button(root, text="Show ROC Curve (XGB)", command=lambda: plot_roc_curve(xgb_model, X_test_scaled, y_test))
         self.roc_curve_button.pack(pady=5)
 
-        #button for viewing confusion matrices
+        # Button for viewing confusion matrices
         self.view_confusion_button = ttk.Button(root, text="View Confusion Matrices", command=lambda: open_file("confusion_matrices.png"))
         self.view_confusion_button.pack(pady=5)
 
@@ -204,7 +193,7 @@ class DisasterPredictionApp:
         self.view_accuracy_button = ttk.Button(root, text="View Train vs Test Accuracy", command=lambda: open_file("train_vs_test_accuracy.png"))
         self.view_accuracy_button.pack(pady=5)
         
-
+    # Function to make a prediction
     def make_prediction(self):
         selected_country = self.country_var.get().strip()
         selected_month = self.month_var.get()
@@ -233,18 +222,19 @@ class DisasterPredictionApp:
             if col not in input_df.columns:
                 input_df[col] = 0
 
+        # Keep the original column order
         input_df = input_df[original_features]  
         input_scaled = scaler.transform(input_df)
-        pred = xgb_model.predict(input_scaled)[0]
+        pred = ensemble_model.predict(input_scaled)[0]
 
+        # Display the prediction
         self.result_listbox.delete(0, tk.END)  # Clear previous results
         if pred == 1:
             self.result_listbox.insert(tk.END, f"Prediction: Disaster in {selected_country} ({selected_month} {selected_year})")
         else:
             self.result_listbox.insert(tk.END, "No disaster predicted for this selection.")
-
-
-        
+    
+    # Function to show the next 10 disasters
     def show_next_10_disasters(self):
         # Get current year and month
         now = datetime.datetime.now()
@@ -252,7 +242,7 @@ class DisasterPredictionApp:
         current_month = now.month
 
         # Find the next 10 disaster predictions from the current date
-        next10 = find_next_n_predictions(xgb_model, scaler, unique_countries, 10, current_year, current_month)
+        next10 = find_next_n_predictions(ensemble_model, scaler, unique_countries, 10, current_year, current_month)
 
         self.result_listbox.delete(0, tk.END)  # Clear previous results
         if next10:
@@ -262,10 +252,8 @@ class DisasterPredictionApp:
             self.result_listbox.insert(tk.END, "No future disasters predicted in the selected range.")
 
 
-# ===================================
-# 4. Run the GUI
-# ===================================
+# Main function
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = DisasterPredictionApp(root)
-    root.mainloop()
+    root = tk.Tk()  # Create the main window
+    app = DisasterPredictionApp(root) # Create the application
+    root.mainloop() # Start the event loop

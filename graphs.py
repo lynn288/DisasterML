@@ -6,6 +6,7 @@ import plotly.express as px
 from matplotlib.widgets import Slider
 from sklearn.metrics import roc_curve, auc
 
+# Function to plot disaster frequency by region
 def disaster_frequency_by_region():
     # Load dataset
     df = pd.read_excel("naturalDisasters.xlsx")
@@ -60,7 +61,7 @@ def disaster_frequency_by_region():
 
     year_slider.valtext.set_visible(False)
 
-    # add tick labels (the list of years) along the slider
+    # Add tick labels (the list of years) along the slider
     slider_ax.set_xticks(years)
     slider_ax.set_xticklabels([str(y) for y in years], rotation=45, ha='center')
 
@@ -76,7 +77,7 @@ def disaster_frequency_by_region():
 
 
 
-
+# Function to plot extent of disasters by region
 def extent_of_disasters_by_region():
     # Load dataset
     df = pd.read_excel("naturalDisasters.xlsx")
@@ -181,10 +182,7 @@ def extent_of_disasters_by_region():
 
     plt.show()
 
-
-
-
-
+# Function to create a choropleth map of total disaster damage and deaths by country over time
 def choropleth_damage_and_deaths():
     df = pd.read_excel("naturalDisasters.xlsx")
     
@@ -232,7 +230,7 @@ def choropleth_damage_and_deaths():
     
     fig.show()
 
-
+# Function to plot ROC curve for a given model
 def plot_roc_curve(model, X_test, y_test):
 
     # Convert y_test to a binary integer array
@@ -260,7 +258,7 @@ def plot_roc_curve(model, X_test, y_test):
 
 
 
-
+# Main function
 if __name__ == '__main__':
     disaster_frequency_by_region()
     extent_of_disasters_by_region()
