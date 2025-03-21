@@ -13,16 +13,41 @@ from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import SMOTE
 
 
+# # Load the processed CSV file (with binary target)
+# df = pd.read_csv('processedNaturalDisasters.csv')
+
+# # Select only numeric columns (exclude string columns)
+# numeric_df = df.select_dtypes(exclude=['object'])  #Only numeric columns for modeling
+# X = numeric_df.drop(columns=['Disaster Occurred'])  # Exclude target column
+# y = numeric_df['Disaster Occurred']  # Target remains numeric
+
+# # Split the data into training and test sets
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
 # Load the processed CSV file (with binary target)
 df = pd.read_csv('processedNaturalDisasters.csv')
 
-# Select only numeric columns (exclude string columns)
-numeric_df = df.select_dtypes(exclude=['object'])  #Only numeric columns for modeling
-X = numeric_df.drop(columns=['Disaster Occurred'])  # Exclude target column
-y = numeric_df['Disaster Occurred']  # Target remains numeric
+# NEW: Create a date column using 'Year' and 'Month'
+df['Date'] = pd.to_datetime(df[['Year', 'Month']].assign(day=1))
+# NEW: Sort by date to ensure chronological order
+df = df.sort_values(by='Date')
 
-# Split the data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Replace random splitting with a date-based split:
+cutoff_date = pd.Timestamp('2016-01-01')
+train_df = df[df['Date'] < cutoff_date]
+test_df = df[df['Date'] >= cutoff_date]
+
+# Select only numeric columns (exclude string columns) for modeling
+numeric_train = train_df.select_dtypes(exclude=['object'])
+numeric_test = test_df.select_dtypes(exclude=['object'])
+
+X_train = numeric_train.drop(columns=['Disaster Occurred', 'Date'])
+y_train = numeric_train['Disaster Occurred']
+
+X_test = numeric_test.drop(columns=['Disaster Occurred', 'Date'])
+y_test = numeric_test['Disaster Occurred']
+
+
 
 # Function to plot feature importances
 rus = RandomUnderSampler(sampling_strategy=0.5, random_state=42)

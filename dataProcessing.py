@@ -111,6 +111,10 @@ def load_and_preprocess_data(input_file, output_file, corr_threshold=0.1):
     cols_to_drop = drop_low_correlation_features(df, target_col='Disaster Occurred', corr_threshold=corr_threshold) # Drop features with low correlation
     print("Columns dropped due to low correlation with target:", cols_to_drop) 
     
+    cols_to_drop = [col for col in cols_to_drop if col not in ['Year', 'Month']]
+    print("Columns dropped due to low correlation with target (after protecting Year and Month):", cols_to_drop)
+
+
     # Keep only the columns with high correlation
     cols_kept = [col for col in df.columns if col not in cols_to_drop]
     print("Columns kept after dropping low correlation features:", cols_kept)
