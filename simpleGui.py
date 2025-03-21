@@ -133,7 +133,7 @@ class DisasterPredictionApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Disaster Prediction")
-        self.root.geometry("500x700")
+        self.root.geometry("500x750")
 
         ttk.Label(root, text="Disaster Occurrence Prediction", font=("Arial", 14)).pack(pady=10)
 
