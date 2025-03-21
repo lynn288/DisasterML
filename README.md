@@ -99,6 +99,26 @@ simpleGui.py – Provides a user interface for making predictions and visualizin
 
 graphs.py – Contains functions for generating various graphs (disaster frequency, extent, damage maps, ROC curves).
 
+### Model Evaluation
+The project includes a robust model evaluation pipeline to ensure the reliability of predictions. The evaluation process considers multiple metrics:
+
+- **Accuracy**: Measures overall correctness of predictions.
+- **Precision & Recall**: Precision helps reduce false positives, while recall ensures actual disaster events are captured.
+- **F1 Score**: Balances precision and recall for a comprehensive measure of model performance.
+- **Confusion Matrices**: Provides a breakdown of true positives, false positives, false negatives, and true negatives for each model.
+
+The models evaluated include:
+- **Random Forest**
+- **XGBoost**
+- **CatBoost**
+- **Ensemble Model (Voting Classifier)**
+
+The **Ensemble Model** was selected as the final model due to its **balanced tradeoff between precision, recall, and generalization ability**, making it the most reliable choice for disaster prediction. While it has slightly higher computational requirements, the performance benefits outweigh the minimal overhead.
+
+Graphs and confusion matrices can be accessed in the GUI under:
+- **View Confusion Matrices**
+- **View Train vs Test Accuracy**
+
 ## Notes
 Date-based Splitting:
 The model training uses a date-based split to ensure that training data only comes from past records. This mimics real-world forecasting and avoids data leakage.
