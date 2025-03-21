@@ -169,6 +169,9 @@ class DisasterPredictionApp:
         self.result_listbox = tk.Listbox(root, height=10, width=50)
         self.result_listbox.pack(pady=10)
 
+        self.view_data_label = ttk.Label(root, text="View historical data graphs", font=("Arial", 12, "bold"))
+        self.view_data_label.pack(pady=5)
+
         # Button to display the disaster frequency graph
         self.graph_button = ttk.Button(root, text="Show Disaster Frequency Graph", command=disaster_frequency_by_region)
         self.graph_button.pack(pady=5)

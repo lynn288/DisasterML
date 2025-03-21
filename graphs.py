@@ -65,6 +65,8 @@ def disaster_frequency_by_region():
     slider_ax.set_xticks(years)
     slider_ax.set_xticklabels([str(y) for y in years], rotation=45, ha='center')
 
+    fig.text(0.5, 0.02, "Move the slider to change the year", ha='center', va='center') 
+    
     # Define update function
     def update(val):
         current_year = int(year_slider.val)
