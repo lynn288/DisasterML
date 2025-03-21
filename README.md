@@ -82,6 +82,12 @@ Click the "Show Next 10 Disasters" button to list upcoming predicted disaster ev
     - **View Confusion Matrices:** Opens the confusion matrices image.
     - **View Train vs Test Accuracy:** Opens the accuracy comparison chart.
 
+- **Addtional File: Hyper_tune.py**
+The Hyper_tune.py script is used to perform hyperparameter tuning for all the machine learning models we have used in this project.
+It uses GridSearchCV and RandomizedSearchCV to find the best hyperparameter configurations for Random Forest, XGBoost, and catBoost.
+
+⚠️ Note: This script is meant for tuning only and will not be executed as part of the main pipeline. Instead, the optimized hyperparameters obtained from this script is applied in the final model training.
+
 ## Troubleshooting
 
 ### File Not Found Errors:
