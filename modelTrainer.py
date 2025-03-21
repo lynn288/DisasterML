@@ -38,19 +38,19 @@ X_test_scaled = scaler.transform(X_test)
 
 # Random Forest Classifier with hyperparameters as provided
 rf_model = RandomForestClassifier(n_estimators=200, max_depth=30,
-                                  min_samples_split=2, min_samples_leaf=1, bootstrap=True, random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
+                                  min_samples_split=2, min_samples_leaf=1, bootstrap=True, random_state=42)  
 rf_model.fit(X_train_scaled, y_train)
 
 # XGBoost Classifier with hyperparameters as provided
 xgb_model = XGBClassifier(n_estimators=200, max_depth=3, learning_rate=0.2,
                           subsample=0.5, colsample_bytree=0.5, use_label_encoder=False,
-                          eval_metric='mlogloss', random_state=42)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
+                          eval_metric='mlogloss', random_state=42)  
 xgb_model.fit(X_train_scaled, y_train)
 
 # CatBoost Classifier with hyperparameters as provided
 cat_model = CatBoostClassifier(iterations=200, learning_rate=0.1, depth=8, l2_leaf_reg=1,
                                border_count=32, loss_function='MultiClass',
-                               random_seed=42, verbose=False)  # !!!!!!!!!! Changed hyperparameters !!!!!!!!!!
+                               random_seed=42, verbose=False)
 cat_model.fit(X_train_scaled, y_train)
 
 # Ensemble Model: Voting Classifier (Soft Voting)
