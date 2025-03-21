@@ -18,7 +18,8 @@ MODEL_FILES = {
     "XGBoost Model": os.path.join(BASE_DIR, "xgb_model.pkl"), # XGBoost model
     "CatBoost Model": os.path.join(BASE_DIR, "catboost_model.pkl"), # CatBoost model
     "Random Forest Model": os.path.join(BASE_DIR, "rf_model.pkl"), # Random Forest model
-    "Scaler": os.path.join(BASE_DIR, "scaler.pkl") # Scaler
+    "Scaler": os.path.join(BASE_DIR, "scaler.pkl"), # Scaler
+    "Ensemble Model": os.path.join(BASE_DIR, "ensemble_model.pkl") # Ensemble model
 }
 
 
