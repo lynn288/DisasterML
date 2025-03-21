@@ -52,7 +52,7 @@ The whole project can be started from the "main.py" file.
 If "processedNaturalDisasters.csv" does not exist, "dataProcessing.py" is executed to process the raw data.
 
 **2. Model Training:**
-If the trained model file does not exist, "modelTrainer.py" is executed to train the model.
+If the trained model files does not exist, "modelTrainer.py" is executed to train the model.
 
 **3. Launching the GUI:**
 Finally, "simpleGui.py" is launched.
